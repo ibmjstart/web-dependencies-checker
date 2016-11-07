@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
@@ -48,6 +49,18 @@ func ServiceList(source []byte) (*serviceList, error) {
 	return &services, nil
 }
 
+func formatStatus(status string) string {
+	if strings.HasPrefix(status, "2") {
+		return fmt.Sprintf("%s", green(status))
+	} else if strings.HasPrefix(status, "3") {
+		return fmt.Sprintf("%s", blue(status))
+	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
+		return fmt.Sprintf("%s", red(status))
+	} else {
+		return fmt.Sprintf("%s %s", red("FAILED:"), status)
+	}
+}
+
 func (s *serviceList) testService(service *service) {
 	for _, url := range service.Sites {
 		if _, found := s.statuses[url]; !found {
@@ -59,6 +72,24 @@ func (s *serviceList) testService(service *service) {
 			}
 		}
 	}
+}
+
+func (s *serviceList) testAll() error {
+	for _, service := range s.Services {
+		// available := true
+		fmt.Printf("%s %s\n", white("Service:"), service.Name)
+
+		for _, url := range service.Sites {
+			status, found := s.statuses[url]
+			if !found {
+				return fmt.Errorf("Error fetching response status for url %s", url)
+			}
+
+			fmt.Printf("\t%s %s %s\n", white("URL:"), url, formatStatus(status))
+		}
+	}
+
+	return nil
 }
 
 func main() {
@@ -73,5 +104,8 @@ func main() {
 		services.testService(&cur)
 	}
 
-	fmt.Printf("%v\n", services.statuses)
+	err = services.testAll()
+	if err != nil {
+		os.Exit(1)
+	}
 }
