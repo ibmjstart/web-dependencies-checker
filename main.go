@@ -95,26 +95,6 @@ func (s *serviceList) testService(service *service) {
 	}
 }
 
-/*
-func (s *serviceList) testAll() error {
-	for _, service := range s.Services {
-		// available := true
-		fmt.Printf("%s %s\n", white("Service:"), service.Name)
-
-		for _, url := range service.Sites {
-			status, found := s.statuses[url]
-			if !found {
-				return fmt.Errorf("Error fetching response status for url %s", url)
-			}
-
-			fmt.Printf("\t%s %s %s\n", white("URL:"), url, formatStatus(status))
-		}
-	}
-
-	return nil
-}
-*/
-
 func main() {
 	source := []byte(data)
 	services, err := ServiceList(source)
@@ -126,11 +106,4 @@ func main() {
 	for _, cur := range services.Services {
 		services.testService(&cur)
 	}
-
-	/*
-		err = services.testAll()
-		if err != nil {
-			os.Exit(1)
-		}
-	*/
 }
