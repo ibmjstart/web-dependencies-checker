@@ -25,7 +25,7 @@ services:
 var white (func(string, ...interface{}) string) = color.New(color.FgHiWhite, color.Bold).SprintfFunc()
 var green (func(string, ...interface{}) string) = color.New(color.FgGreen, color.Bold).SprintfFunc()
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
-var blue (func(string, ...interface{}) string) = color.New(color.FgBlue, color.Bold).SprintfFunc()
+var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan, color.Bold).SprintfFunc()
 
 type service struct {
 	Name  string
@@ -53,7 +53,7 @@ func formatStatus(status string) string {
 	if strings.HasPrefix(status, "2") {
 		return fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
-		return fmt.Sprintf("%s", blue(status))
+		return fmt.Sprintf("%s", cyan(status))
 	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
 		return fmt.Sprintf("%s", red(status))
 	} else {
@@ -61,19 +61,41 @@ func formatStatus(status string) string {
 	}
 }
 
-func (s *serviceList) testService(service *service) {
-	for _, url := range service.Sites {
-		if _, found := s.statuses[url]; !found {
-			response, err := http.Head(url)
-			if err != nil {
-				s.statuses[url] = err.Error()
-			} else {
-				s.statuses[url] = response.Status
+func (s *serviceList) testUrl(url string, available bool) bool {
+	if _, found := s.statuses[url]; !found {
+		response, err := http.Head(url)
+		if err != nil {
+			available = false
+			s.statuses[url] = err.Error()
+		} else {
+			if strings.HasPrefix(response.Status, "4") || strings.HasPrefix(response.Status, "5") {
+				available = false
 			}
+			s.statuses[url] = response.Status
 		}
+	}
+
+	fmt.Printf("\t%s %s %s\n", white("URL:"), url, formatStatus(s.statuses[url]))
+	return available
+}
+
+func (s *serviceList) testService(service *service) {
+	available := true
+
+	fmt.Printf("%s %s\n", white("Service:"), service.Name)
+
+	for _, url := range service.Sites {
+		available = s.testUrl(url, available)
+	}
+
+	if available {
+		fmt.Printf("\t%s\n", green("Available"))
+	} else {
+		fmt.Printf("\t%s\n", red("Unavailable"))
 	}
 }
 
+/*
 func (s *serviceList) testAll() error {
 	for _, service := range s.Services {
 		// available := true
@@ -91,6 +113,7 @@ func (s *serviceList) testAll() error {
 
 	return nil
 }
+*/
 
 func main() {
 	source := []byte(data)
@@ -104,8 +127,10 @@ func main() {
 		services.testService(&cur)
 	}
 
-	err = services.testAll()
-	if err != nil {
-		os.Exit(1)
-	}
+	/*
+		err = services.testAll()
+		if err != nil {
+			os.Exit(1)
+		}
+	*/
 }
