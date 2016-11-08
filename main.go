@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
@@ -14,12 +15,22 @@ var data = `
 services:
  - name: firstService
    sites:
-    - http://github.com
+    - http://gmail.com
     - http://google.com
+    - http://stackoverflow.com
+    - http://github.com/reSoley/asdf
+    - http://youtu.be
+    - https://w3-03.sso.ibm.com/
+    - http://facebook.com
  - name: secondService
    sites:
     - http://google.com
     - https://w3-03.sso.ibm.com/
+    - http://gmail.com
+ - name: thirdService
+   sites:
+    - http://psu.edu
+    - http://facebook.com
 `
 
 var white (func(string, ...interface{}) string) = color.New(color.FgHiWhite, color.Bold).SprintfFunc()
@@ -35,6 +46,8 @@ type service struct {
 type serviceList struct {
 	Services []service
 	statuses map[string]string
+	output   chan string
+	sync.RWMutex
 }
 
 func ServiceList(source []byte) (*serviceList, error) {
@@ -45,6 +58,8 @@ func ServiceList(source []byte) (*serviceList, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	services.output = make(chan string)
 
 	return &services, nil
 }
@@ -61,37 +76,67 @@ func formatStatus(status string) string {
 	}
 }
 
-func (s *serviceList) testUrl(url string, available bool) bool {
-	if _, found := s.statuses[url]; !found {
+func (s *serviceList) write() {
+	for x := range s.output {
+		fmt.Print(x)
+	}
+}
+
+func (s *serviceList) safeLookup(key string) (string, bool) {
+	s.RLock()
+	value, found := s.statuses[key]
+	s.RUnlock()
+
+	return value, found
+}
+
+func (s *serviceList) safeWrite(key, value string) {
+	s.Lock()
+	s.statuses[key] = value
+	s.Unlock()
+}
+
+func (s *serviceList) testUrl(url string, available chan bool) {
+	_, found := s.safeLookup(url)
+
+	if !found {
 		response, err := http.Head(url)
 		if err != nil {
-			available = false
-			s.statuses[url] = err.Error()
+			s.safeWrite(url, err.Error())
 		} else {
-			if strings.HasPrefix(response.Status, "4") || strings.HasPrefix(response.Status, "5") {
-				available = false
-			}
-			s.statuses[url] = response.Status
+			s.safeWrite(url, response.Status)
 		}
 	}
 
-	fmt.Printf("\t%s %s %s\n", white("URL:"), url, formatStatus(s.statuses[url]))
-	return available
+	status, _ := s.safeLookup(url)
+
+	s.output <- fmt.Sprintf("\t%s %s %s\n", white("URL:"), url, formatStatus(status))
+
+	if strings.HasPrefix(status, "2") {
+		available <- true
+	} else {
+		available <- false
+	}
 }
 
 func (s *serviceList) testService(service *service) {
-	available := true
+	available := make(chan bool)
 
-	fmt.Printf("%s %s\n", white("Service:"), service.Name)
+	s.output <- fmt.Sprintf("%s %s\n", white("Service:"), service.Name)
 
 	for _, url := range service.Sites {
-		available = s.testUrl(url, available)
+		go s.testUrl(url, available)
 	}
 
-	if available {
-		fmt.Printf("\t%s\n", green("Available"))
+	isAvailable := true
+	for i := 0; i < len(service.Sites); i++ {
+		isAvailable = <-available && isAvailable
+	}
+
+	if isAvailable {
+		s.output <- fmt.Sprintf("\t%s\n", green("Available"))
 	} else {
-		fmt.Printf("\t%s\n", red("Unavailable"))
+		s.output <- fmt.Sprintf("\t%s\n", red("Unavailable"))
 	}
 }
 
@@ -102,7 +147,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%v\n", services)
+	go services.write()
+	defer close(services.output)
+
 	for _, cur := range services.Services {
 		services.testService(&cur)
 	}
