@@ -15,9 +15,9 @@ var data = `
 services:
  - name: firstService
    sites:
-    - http://gmail.com
+    - gmail.com
     - http://google.com
-    - http://stackoverflow.com
+    - stackoverflow.com
     - http://github.com/reSoley/asdf
     - http://youtu.be
     - https://w3-03.sso.ibm.com/
@@ -26,7 +26,7 @@ services:
    sites:
     - http://google.com
     - https://w3-03.sso.ibm.com/
-    - http://gmail.com
+    - gmail.com
  - name: thirdService
    sites:
     - http://psu.edu
@@ -78,6 +78,14 @@ func formatStatus(status string) string {
 	}
 }
 
+func checkProtocol(url string) string {
+	if !strings.HasPrefix(url, "http") {
+		return "http://" + url
+	}
+
+	return url
+}
+
 func (s *serviceList) write() {
 	for x := range s.output {
 		fmt.Print(x)
@@ -102,7 +110,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	_, found := s.safeLookup(url)
 
 	if !found {
-		response, err := http.Head(url)
+		response, err := http.Head(checkProtocol(url))
 		if err != nil {
 			s.safeWrite(url, err.Error())
 		} else {
