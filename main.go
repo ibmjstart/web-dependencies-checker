@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -10,28 +11,6 @@ import (
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
 )
-
-var data = `
-services:
- - name: firstService
-   sites:
-    - gmail.com
-    - http://google.com
-    - stackoverflow.com
-    - http://github.com/reSoley/asdf
-    - http://youtu.be
-    - https://w3-03.sso.ibm.com/
-    - http://facebook.com
- - name: secondService
-   sites:
-    - http://google.com
-    - https://w3-03.sso.ibm.com/
-    - gmail.com
- - name: thirdService
-   sites:
-    - http://psu.edu
-    - http://facebook.com
-`
 
 var white (func(string, ...interface{}) string) = color.New(color.FgHiWhite, color.Bold).SprintfFunc()
 var green (func(string, ...interface{}) string) = color.New(color.FgGreen, color.Bold).SprintfFunc()
@@ -64,6 +43,15 @@ func ServiceList(source []byte) (*serviceList, error) {
 	}
 
 	return &services, nil
+}
+
+func readLocalSource(filepath string) ([]byte, error) {
+	source, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	return source, nil
 }
 
 func formatStatus(status string) string {
@@ -165,9 +153,17 @@ func (s *serviceList) displayResults() {
 }
 
 func main() {
-	source := []byte(data)
+	if len(os.Args) < 2 {
+		fmt.Println("Invalid number of arguments")
+		fmt.Println("USAGE: ./bx-availability local_YAML_file")
+		os.Exit(1)
+	}
+
+	source, err := readLocalSource(os.Args[1])
+
 	services, err := ServiceList(source)
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
