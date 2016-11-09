@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 
@@ -18,6 +19,20 @@ var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan, color.B
 
 func readLocalSource(filepath string) ([]byte, error) {
 	source, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, err
+	}
+
+	return source, nil
+}
+
+func readWebSource(sourceUrl string) ([]byte, error) {
+	response, err := http.Get(sourceUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	source, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -45,14 +60,30 @@ func formatStatus(status string) string {
 	}
 }
 
+func printUsage() {
+	fmt.Println("Invalid arguments")
+	fmt.Println("USAGE: ./bx-availability [-r|-l] YAML_file")
+	fmt.Println("OPTIONS: r - read from remote web source")
+	fmt.Println("         l - read from local file")
+	os.Exit(1)
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Invalid number of arguments")
-		fmt.Println("USAGE: ./bx-availability local_YAML_file")
-		os.Exit(1)
+	var source []byte
+	var err error
+
+	if len(os.Args) < 3 {
+		printUsage()
 	}
 
-	source, err := readLocalSource(os.Args[1])
+	if os.Args[1] == "-r" {
+		source, err = readWebSource(os.Args[2])
+	} else if os.Args[1] == "-l" {
+		source, err = readLocalSource(os.Args[2])
+	} else {
+		printUsage()
+	}
+
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
