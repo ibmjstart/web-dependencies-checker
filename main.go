@@ -44,22 +44,24 @@ type service struct {
 }
 
 type serviceList struct {
-	Services []service
-	statuses map[string]string
-	output   chan string
+	Services    []service
+	isAvailable map[string]bool
+	statuses    map[string]string
+	output      chan string
 	sync.RWMutex
 }
 
 func ServiceList(source []byte) (*serviceList, error) {
 	var services serviceList
 
+	services.isAvailable = make(map[string]bool)
 	services.statuses = make(map[string]string)
+	services.output = make(chan string)
+
 	err := yaml.Unmarshal(source, &services)
 	if err != nil {
 		return nil, err
 	}
-
-	services.output = make(chan string)
 
 	return &services, nil
 }
@@ -138,6 +140,20 @@ func (s *serviceList) testService(service *service) {
 	} else {
 		s.output <- fmt.Sprintf("\t%s\n", red("Unavailable"))
 	}
+
+	s.isAvailable[service.Name] = isAvailable
+}
+
+func (s *serviceList) displayResults() {
+	fmt.Printf("\n%s\n", green("Available Services"))
+	for service, isAvailable := range s.isAvailable {
+		if isAvailable {
+			fmt.Printf("%s\n", service)
+		} else {
+			defer fmt.Printf("%s\n", service)
+		}
+	}
+	fmt.Printf("\n%s\n", red("Unavailable Services"))
 }
 
 func main() {
@@ -153,4 +169,6 @@ func main() {
 	for _, cur := range services.Services {
 		services.testService(&cur)
 	}
+
+	services.displayResults()
 }
