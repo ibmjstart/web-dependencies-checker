@@ -62,7 +62,13 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	if !found {
 		response, err := client.Head(checkProtocol(url))
 		if err != nil {
-			s.safeWrite(url, err.Error())
+			if strings.Contains(err.Error(), "Timeout exceeded") {
+				s.safeWrite(url, "Request timeout exceeded")
+			} else if strings.Contains(err.Error(), "no such host") {
+				s.safeWrite(url, "No such host")
+			} else {
+				s.safeWrite(url, err.Error())
+			}
 		} else {
 			s.safeWrite(url, response.Status)
 		}
