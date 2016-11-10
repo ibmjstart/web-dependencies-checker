@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 )
@@ -16,6 +18,14 @@ var white (func(string, ...interface{}) string) = color.New(color.FgHiWhite, col
 var green (func(string, ...interface{}) string) = color.New(color.FgGreen, color.Bold).SprintfFunc()
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
 var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan, color.Bold).SprintfFunc()
+
+var client = &http.Client{
+	Timeout: 60 * time.Second,
+}
+
+func setTimeout(seconds int) {
+	client.Timeout = time.Duration(seconds) * time.Second
+}
 
 func readLocalSource(filepath string) ([]byte, error) {
 	source, err := ioutil.ReadFile(filepath)
@@ -62,9 +72,11 @@ func formatStatus(status string) string {
 
 func printUsage() {
 	fmt.Println("Invalid arguments")
-	fmt.Println("USAGE: ./bx-availability [-r|-l] YAML_file")
-	fmt.Println("OPTIONS: r - read from remote web source")
-	fmt.Println("         l - read from local file")
+	fmt.Println("USAGE: ./bx-availability -r remote_YAML_file [-t seconds]")
+	fmt.Println("       ./bx-availability -l local_YAML_file [-t seconds]")
+	fmt.Println("OPTIONS: r - read YAML from remote web source")
+	fmt.Println("         l - read YAML from local file")
+	fmt.Println("         t - http request timeout (in seconds)")
 	os.Exit(1)
 }
 
@@ -87,6 +99,18 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	if len(os.Args) > 4 {
+		if os.Args[3] == "-t" {
+			timeout, err := strconv.Atoi(os.Args[4])
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			setTimeout(timeout)
+		}
 	}
 
 	services, err := ServiceList(source)

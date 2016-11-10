@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -61,7 +60,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	_, found := s.safeLookup(url)
 
 	if !found {
-		response, err := http.Head(checkProtocol(url))
+		response, err := client.Head(checkProtocol(url))
 		if err != nil {
 			s.safeWrite(url, err.Error())
 		} else {
