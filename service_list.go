@@ -18,15 +18,17 @@ type serviceList struct {
 	isAvailable map[string]bool
 	statuses    map[string]string
 	output      chan string
+	verbose     bool
 	sync.RWMutex
 }
 
-func ServiceList(source []byte) (*serviceList, error) {
+func ServiceList(source []byte, verbose bool) (*serviceList, error) {
 	var services serviceList
 
 	services.isAvailable = make(map[string]bool)
 	services.statuses = make(map[string]string)
 	services.output = make(chan string)
+	services.verbose = verbose
 
 	err := yaml.Unmarshal(source, &services)
 	if err != nil {
@@ -76,19 +78,17 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 
 	status, _ := s.safeLookup(url)
 
-	s.output <- fmt.Sprintf("\t%s %s %s\n", white("URL:"), url, formatStatus(status))
-
-	if strings.HasPrefix(status, "2") {
-		available <- true
-	} else {
-		available <- false
+	isAvailable, formattedStatus := formatStatus(status)
+	if s.verbose || !isAvailable {
+		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)
 	}
+	available <- isAvailable
 }
 
 func (s *serviceList) testService(service *service) {
 	available := make(chan bool)
 
-	s.output <- fmt.Sprintf("%s %s\n", white("Service:"), service.Name)
+	s.output <- fmt.Sprintf("%s %s\n", "Service:", service.Name)
 
 	for _, url := range service.Sites {
 		go s.testUrl(url, available)
@@ -100,9 +100,9 @@ func (s *serviceList) testService(service *service) {
 	}
 
 	if isAvailable {
-		s.output <- fmt.Sprintf("\t%s\n", green("Available"))
+		s.output <- fmt.Sprintf("\t %s\n", green("Available"))
 	} else {
-		s.output <- fmt.Sprintf("\t%s\n", red("Unavailable"))
+		s.output <- fmt.Sprintf("\t %s\n", red("Unavailable"))
 	}
 
 	s.isAvailable[service.Name] = isAvailable

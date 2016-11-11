@@ -1,11 +1,11 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,10 +14,9 @@ import (
 
 const jStartUrl string = "www.ibm.com/jstart"
 
-var white (func(string, ...interface{}) string) = color.New(color.FgHiWhite, color.Bold).SprintfFunc()
 var green (func(string, ...interface{}) string) = color.New(color.FgGreen, color.Bold).SprintfFunc()
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
-var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan, color.Bold).SprintfFunc()
+var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan).SprintfFunc()
 
 var client = &http.Client{
 	Timeout: 60 * time.Second,
@@ -58,15 +57,15 @@ func checkProtocol(url string) string {
 	return url
 }
 
-func formatStatus(status string) string {
+func formatStatus(status string) (bool, string) {
 	if strings.HasPrefix(status, "2") {
-		return fmt.Sprintf("%s", green(status))
+		return true, fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
-		return fmt.Sprintf("%s", cyan(status))
+		return true, fmt.Sprintf("%s", cyan(status))
 	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
-		return fmt.Sprintf("%s", red(status))
+		return false, fmt.Sprintf("%s", red(status))
 	} else {
-		return fmt.Sprintf("%s %s", red("FAILED:"), status)
+		return false, fmt.Sprintf("%s %s", red("FAILED:"), status)
 	}
 }
 
@@ -80,40 +79,39 @@ func printUsage() {
 	os.Exit(1)
 }
 
+func parseArgs() (func(string) ([]byte, error), string, int, bool, error) {
+	remote := flag.String("r", "", "read YAML from remote web source")
+	local := flag.String("l", "", "read YAML from local file")
+	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
+	verbose := flag.Bool("v", false, "display status response for all URLs")
+	flag.Parse()
+
+	if (*remote == "") == (*local == "") {
+		return nil, "", 0, false, fmt.Errorf("")
+	}
+
+	if *remote != "" {
+		return readWebSource, *remote, *timeout, *verbose, nil
+	}
+
+	return readLocalSource, *local, *timeout, *verbose, nil
+}
+
 func main() {
-	var source []byte
-	var err error
-
-	if len(os.Args) < 3 {
+	read, sourceFile, timeout, verbose, err := parseArgs()
+	if err != nil {
 		printUsage()
 	}
 
-	if os.Args[1] == "-r" {
-		source, err = readWebSource(os.Args[2])
-	} else if os.Args[1] == "-l" {
-		source, err = readLocalSource(os.Args[2])
-	} else {
-		printUsage()
-	}
-
+	sourceData, err := read(sourceFile)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if len(os.Args) > 4 {
-		if os.Args[3] == "-t" {
-			timeout, err := strconv.Atoi(os.Args[4])
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+	setTimeout(timeout)
 
-			setTimeout(timeout)
-		}
-	}
-
-	services, err := ServiceList(source)
+	services, err := ServiceList(sourceData, verbose)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -126,6 +124,8 @@ func main() {
 		services.testService(&cur)
 	}
 
-	services.displayResults()
+	if verbose {
+		services.displayResults()
+	}
 	fmt.Printf("\nCourtesy of %s - %s\n", cyan("IBM jStart"), jStartUrl)
 }
