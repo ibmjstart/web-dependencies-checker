@@ -15,6 +15,7 @@ import (
 const jStartUrl string = "www.ibm.com/jstart"
 
 var green (func(string, ...interface{}) string) = color.New(color.FgGreen, color.Bold).SprintfFunc()
+var yellow (func(string, ...interface{}) string) = color.New(color.FgYellow, color.Bold).SprintfFunc()
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
 var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan).SprintfFunc()
 
@@ -49,7 +50,11 @@ func readWebSource(sourceUrl string) ([]byte, error) {
 	return source, nil
 }
 
-func checkProtocol(url string) string {
+func formatUrl(url string) string {
+	if strings.Contains(url, "*.") {
+		url = strings.Replace(url, "*.", "", 1)
+	}
+
 	if !strings.HasPrefix(url, "http") {
 		return "http://" + url
 	}
@@ -61,7 +66,7 @@ func formatStatus(status string) (bool, string) {
 	if strings.HasPrefix(status, "2") {
 		return true, fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
-		return true, fmt.Sprintf("%s", cyan(status))
+		return true, fmt.Sprintf("%s", yellow(status))
 	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
 		return false, fmt.Sprintf("%s", red(status))
 	} else {

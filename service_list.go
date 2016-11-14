@@ -68,7 +68,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	_, found := s.safeLookup(url)
 
 	if !found {
-		response, err := client.Head(checkProtocol(url))
+		response, err := client.Head(formatUrl(url))
 		if err != nil {
 			if strings.Contains(err.Error(), "Timeout exceeded") {
 				s.safeWrite(url, "Request timeout exceeded")
@@ -85,6 +85,10 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	status, _ := s.safeLookup(url)
 
 	isAvailable, formattedStatus := formatStatus(status)
+	if strings.Contains(url, "*.") {
+		formattedStatus = fmt.Sprintf("%s - %s Wildcard subdomains unsupported. Status reported for domain.", formattedStatus, yellow("WARNING:"))
+	}
+
 	if s.verbose || !isAvailable {
 		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)
 	}
