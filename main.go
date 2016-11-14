@@ -81,6 +81,7 @@ func printUsage() {
 	fmt.Println("OPTIONS: r - read YAML from remote web source")
 	fmt.Println("         l - read YAML from local file")
 	fmt.Println("         t - http request timeout (in seconds)")
+	fmt.Println("         c - disable color output")
 	os.Exit(1)
 }
 
@@ -89,7 +90,12 @@ func parseArgs() (func(string) ([]byte, error), string, int, bool, error) {
 	local := flag.String("l", "", "read YAML from local file")
 	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
 	verbose := flag.Bool("v", false, "display status response for all URLs")
+	noColor := flag.Bool("c", false, "disable color")
 	flag.Parse()
+
+	if *noColor {
+		color.NoColor = true
+	}
 
 	if (*remote == "") == (*local == "") {
 		return nil, "", 0, false, fmt.Errorf("")
