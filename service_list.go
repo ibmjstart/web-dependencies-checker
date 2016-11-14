@@ -9,23 +9,22 @@ import (
 )
 
 type service struct {
-	Name  string
-	Sites []string
+	Name        string
+	Sites       []string
+	isAvailable bool
 }
 
 type serviceList struct {
-	Services    []service
-	isAvailable map[string]bool
-	statuses    map[string]string
-	output      chan string
-	verbose     bool
+	Services []service
+	statuses map[string]string
+	output   chan string
+	verbose  bool
 	sync.RWMutex
 }
 
 func ServiceList(source []byte, verbose bool) (*serviceList, error) {
 	var services serviceList
 
-	services.isAvailable = make(map[string]bool)
 	services.statuses = make(map[string]string)
 	services.output = make(chan string)
 	services.verbose = verbose
@@ -95,17 +94,17 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 	available <- isAvailable
 }
 
-func (s *serviceList) testService(service *service) {
+func (s *serviceList) testService(serviceIndex int) {
 	available := make(chan bool)
 
-	s.output <- fmt.Sprintf("%s %s\n", "Service:", service.Name)
+	s.output <- fmt.Sprintf("%s %s\n", "Service:", s.Services[serviceIndex].Name)
 
-	for _, url := range service.Sites {
+	for _, url := range s.Services[serviceIndex].Sites {
 		go s.testUrl(url, available)
 	}
 
 	isAvailable := true
-	for i := 0; i < len(service.Sites); i++ {
+	for i := 0; i < len(s.Services[serviceIndex].Sites); i++ {
 		isAvailable = <-available && isAvailable
 	}
 
@@ -115,17 +114,19 @@ func (s *serviceList) testService(service *service) {
 		s.output <- fmt.Sprintf("\t %s\n", red("Unavailable"))
 	}
 
-	s.isAvailable[service.Name] = isAvailable
+	s.Services[serviceIndex].isAvailable = isAvailable
 }
 
 func (s *serviceList) displayResults() {
-	fmt.Printf("\n%s\n", green("Available Services"))
-	for service, isAvailable := range s.isAvailable {
-		if isAvailable {
-			fmt.Printf("%s\n", service)
+	s.output <- fmt.Sprintf("\n%s\n", green("Available Services"))
+	for _, service := range s.Services {
+		if service.isAvailable {
+			s.output <- fmt.Sprintf("%s\n", service.Name)
 		} else {
-			defer fmt.Printf("%s\n", service)
+			defer func(name string) {
+				s.output <- fmt.Sprintf("%s\n", name)
+			}(service.Name)
 		}
 	}
-	fmt.Printf("\n%s\n", red("Unavailable Services"))
+	s.output <- fmt.Sprintf("\n%s\n", red("Unavailable Services"))
 }

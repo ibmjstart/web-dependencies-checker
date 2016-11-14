@@ -133,8 +133,8 @@ func main() {
 	go services.write(done)
 	defer close(services.output)
 
-	for _, cur := range services.Services {
-		services.testService(&cur)
+	for i, _ := range services.Services {
+		services.testService(i)
 	}
 
 	if verbose {
