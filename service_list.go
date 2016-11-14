@@ -38,9 +38,15 @@ func ServiceList(source []byte, verbose bool) (*serviceList, error) {
 	return &services, nil
 }
 
-func (s *serviceList) write() {
-	for x := range s.output {
-		fmt.Print(x)
+func (s *serviceList) write(done chan int) {
+	for {
+		select {
+		case <-done:
+			done <- 0
+			return
+		case x := <-s.output:
+			fmt.Print(x)
+		}
 	}
 }
 
