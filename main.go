@@ -85,15 +85,17 @@ func formatStatus(url, status string) (bool, string) {
 }
 
 func printUsage() {
-	fmt.Println(red("Invalid arguments"))
-	fmt.Printf("\n%s ./bx-availability -r remote_YAML_file [-t seconds] [-v] [-c]\n", cyan("USAGE:"))
-	fmt.Println("          -or-")
-	fmt.Println("       ./bx-availability -l local_YAML_file [-t seconds] [-v] [-c]")
-	fmt.Printf("\n%s r - read YAML from remote web source\n", cyan("OPTIONS:"))
-	fmt.Println("         l - read YAML from local file")
-	fmt.Println("         t - http request timeout (in seconds)")
-	fmt.Println("         v - verbose")
-	fmt.Println("         c - disable color output")
+	usage := red("Invalid arguments") + "\n\n" +
+		cyan("USAGE:") + " ./bx-availability -r remote_YAML_file [-t seconds] [-v] [-c]\n" +
+		"          -or-\n" +
+		"       ./bx-availability -l local_YAML_file [-t seconds] [-v] [-c]\n\n" +
+		cyan("OPTIONS:") + " r - read YAML from remote web source\n" +
+		"         l - read YAML from local file\n" +
+		"         t - http request timeout (in seconds)\n" +
+		"         v - verbose\n" +
+		"         c - disable color output\n"
+
+	fmt.Print(usage)
 	os.Exit(1)
 }
 
