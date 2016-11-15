@@ -39,12 +39,11 @@ func ServiceList(source []byte, verbose bool) (*serviceList, error) {
 
 func (s *serviceList) write(done chan int) {
 	for {
-		select {
-		case <-done:
+		x := <-s.output
+		fmt.Print(x)
+
+		if x == fmt.Sprintf("\t %s\n", green("Available")) || x == fmt.Sprintf("\t %s\n", red("Unavailable")) {
 			done <- 0
-			return
-		case x := <-s.output:
-			fmt.Print(x)
 		}
 	}
 }
@@ -118,15 +117,13 @@ func (s *serviceList) testService(serviceIndex int) {
 }
 
 func (s *serviceList) displayResults() {
-	s.output <- fmt.Sprintf("\n%s\n", green("Available Services"))
+	fmt.Printf("\n%s\n", green("Available Services"))
 	for _, service := range s.Services {
 		if service.isAvailable {
-			s.output <- fmt.Sprintf("%s\n", service.Name)
+			fmt.Printf("%s\n", service.Name)
 		} else {
-			defer func(name string) {
-				s.output <- fmt.Sprintf("%s\n", name)
-			}(service.Name)
+			defer fmt.Printf("%s\n", service.Name)
 		}
 	}
-	s.output <- fmt.Sprintf("\n%s\n", red("Unavailable Services"))
+	fmt.Printf("\n%s\n", red("Unavailable Services"))
 }

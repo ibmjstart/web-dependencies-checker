@@ -131,16 +131,17 @@ func main() {
 
 	done := make(chan int)
 	go services.write(done)
-	defer close(services.output)
 
 	for i, _ := range services.Services {
 		services.testService(i)
+		_ = <-done
 	}
+
+	close(services.output)
+	close(done)
 
 	if verbose {
 		services.displayResults()
 	}
-	services.output <- fmt.Sprintf("\nCourtesy of %s - %s\n", cyan("IBM jStart"), jStartUrl)
-	done <- 0
-	_ = <-done
+	fmt.Printf("\nCourtesy of %s - %s\n", cyan("IBM jStart"), jStartUrl)
 }
