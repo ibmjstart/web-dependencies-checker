@@ -52,7 +52,7 @@ func readWebSource(sourceUrl string) ([]byte, error) {
 
 func formatUrl(url string) string {
 	if strings.Contains(url, "*.") {
-		url = strings.Replace(url, "*.", "", 1)
+		url = strings.Replace(url, "*.", "", -1)
 	}
 
 	if !strings.HasPrefix(url, "http") {
@@ -79,8 +79,8 @@ func formatStatus(url, status string) (bool, string) {
 	}
 
 	if strings.Contains(url, "*.") {
-		formattedStatus += fmt.Sprintf(" **%s Wildcards unsupported, reporting for %s**",
-			yellow("WARNING:"), yellow(strings.Replace(url, "*.", "", 1)))
+		formattedStatus += fmt.Sprintf("\n\t      %s Wildcards unsupported, reporting for %s ",
+			yellow("WARNING:"), yellow(strings.Replace(url, "*.", "", -1)))
 	}
 
 	return isAvailable, formattedStatus
