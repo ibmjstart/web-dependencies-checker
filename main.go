@@ -19,9 +19,7 @@ var yellow (func(string, ...interface{}) string) = color.New(color.FgYellow, col
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
 var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan).SprintfFunc()
 
-var client = &http.Client{
-	Timeout: 60 * time.Second,
-}
+var client = &http.Client{}
 
 func setTimeout(seconds int) {
 	client.Timeout = time.Duration(seconds) * time.Second
