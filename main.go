@@ -62,16 +62,28 @@ func formatUrl(url string) string {
 	return url
 }
 
-func formatStatus(status string) (bool, string) {
+func formatStatus(url, status string) (bool, string) {
+	isAvailable := false
+	formattedStatus := ""
+
 	if strings.HasPrefix(status, "2") {
-		return true, fmt.Sprintf("%s", green(status))
+		isAvailable = true
+		formattedStatus += fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
-		return true, fmt.Sprintf("%s", yellow(status))
+		isAvailable = true
+		formattedStatus += fmt.Sprintf("%s", yellow(status))
 	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
-		return false, fmt.Sprintf("%s", red(status))
+		formattedStatus += fmt.Sprintf("%s", red(status))
 	} else {
-		return false, fmt.Sprintf("%s %s", red("FAILED:"), status)
+		formattedStatus += fmt.Sprintf("%s %s", red("FAILED:"), status)
 	}
+
+	if strings.Contains(url, "*.") {
+		formattedStatus += fmt.Sprintf(" **%s Wildcards unsupported, reporting for %s**",
+			yellow("WARNING:"), yellow(strings.Replace(url, "*.", "", 1)))
+	}
+
+	return isAvailable, formattedStatus
 }
 
 func printUsage() {

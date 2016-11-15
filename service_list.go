@@ -82,10 +82,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 
 	status, _ := s.safeLookup(url)
 
-	isAvailable, formattedStatus := formatStatus(status)
-	if strings.Contains(url, "*.") {
-		formattedStatus = fmt.Sprintf("%s - %s Wildcard subdomains unsupported. Status reported for domain.", formattedStatus, yellow("WARNING:"))
-	}
+	isAvailable, formattedStatus := formatStatus(url, status)
 
 	if s.verbose || !isAvailable {
 		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)
