@@ -86,7 +86,7 @@ func printUsage() {
 	os.Exit(1)
 }
 
-func parseArgs() (func(string) ([]byte, error), string, int, bool, error) {
+func parseArgs() (func(string) ([]byte, error), string, bool, error) {
 	remote := flag.String("r", "", "read YAML from remote web source")
 	local := flag.String("l", "", "read YAML from local file")
 	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
@@ -98,19 +98,21 @@ func parseArgs() (func(string) ([]byte, error), string, int, bool, error) {
 		color.NoColor = true
 	}
 
+	setTimeout(*timeout)
+
 	if (*remote == "") == (*local == "") {
-		return nil, "", 0, false, fmt.Errorf("")
+		return nil, "", false, fmt.Errorf("")
 	}
 
 	if *remote != "" {
-		return readWebSource, *remote, *timeout, *verbose, nil
+		return readWebSource, *remote, *verbose, nil
 	}
 
-	return readLocalSource, *local, *timeout, *verbose, nil
+	return readLocalSource, *local, *verbose, nil
 }
 
 func main() {
-	read, sourceFile, timeout, verbose, err := parseArgs()
+	read, sourceFile, verbose, err := parseArgs()
 	if err != nil {
 		printUsage()
 	}
@@ -120,8 +122,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	setTimeout(timeout)
 
 	services, err := ServiceList(sourceData, verbose)
 	if err != nil {
