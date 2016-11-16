@@ -22,16 +22,20 @@ type serviceList struct {
 	sync.RWMutex
 }
 
-func ServiceList(source []byte, verbose bool) (*serviceList, error) {
-	var services serviceList
+func ServiceList(sources [][]byte, verbose bool) (*serviceList, error) {
+	var services, temp serviceList
 
 	services.statuses = make(map[string]string)
 	services.output = make(chan string)
 	services.verbose = verbose
 
-	err := yaml.Unmarshal(source, &services)
-	if err != nil {
-		return nil, err
+	for _, source := range sources {
+		err := yaml.Unmarshal(source, &temp)
+		if err != nil {
+			return nil, err
+		}
+
+		services.Services = append(services.Services, temp.Services...)
 	}
 
 	return &services, nil

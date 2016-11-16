@@ -40,12 +40,38 @@ func readWebSource(sourceUrl string) ([]byte, error) {
 		return nil, err
 	}
 
+	if !strings.HasPrefix(response.Status, "2") {
+		return nil, fmt.Errorf("%s at %s", response.Status, sourceUrl)
+	}
+
 	source, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	return source, nil
+}
+
+func getData(locations []string) ([][]byte, error) {
+	var tempData []byte
+	var dataList [][]byte
+	var err error
+
+	for _, location := range locations {
+		if strings.HasPrefix(location, "http") {
+			tempData, err = readWebSource(location)
+		} else {
+			tempData, err = readLocalSource(location)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		dataList = append(dataList, tempData)
+	}
+
+	return dataList, nil
 }
 
 func formatUrl(url string) string {
@@ -84,14 +110,11 @@ func formatStatus(url, status string) (bool, string) {
 	return isAvailable, formattedStatus
 }
 
-func printUsage() {
-	usage := red("Invalid arguments") + "\n\n" +
-		cyan("USAGE:") + " ./bx-availability -r remote_YAML_file [-t seconds] [-v] [-c]\n" +
-		"          -or-\n" +
-		"       ./bx-availability -l local_YAML_file [-t seconds] [-v] [-c]\n\n" +
-		cyan("OPTIONS:") + " r - read YAML from remote web source\n" +
-		"         l - read YAML from local file\n" +
-		"         t - http request timeout (in seconds)\n" +
+func printUsage(err error) {
+	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
+		cyan("USAGE:") + " ./bx-availability [-t seconds] [-v] [-c] " +
+		"YAML_file_location [YAML_file_location...]\n\n" +
+		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
 		"         v - verbose\n" +
 		"         c - disable color output\n"
 
@@ -99,9 +122,7 @@ func printUsage() {
 	os.Exit(1)
 }
 
-func parseArgs() (func(string) ([]byte, error), string, bool, error) {
-	remote := flag.String("r", "", "read YAML from remote web source")
-	local := flag.String("l", "", "read YAML from local file")
+func parseArgs() ([][]byte, bool, error) {
 	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
 	verbose := flag.Bool("v", false, "display status response for all URLs")
 	noColor := flag.Bool("c", false, "disable color")
@@ -112,28 +133,24 @@ func parseArgs() (func(string) ([]byte, error), string, bool, error) {
 	}
 
 	setTimeout(*timeout)
+	locations := flag.Args()
 
-	if (*remote == "") == (*local == "") {
-		return nil, "", false, fmt.Errorf("")
+	if len(locations) == 0 {
+		return nil, false, fmt.Errorf("No YAML file(s) provided")
 	}
 
-	if *remote != "" {
-		return readWebSource, *remote, *verbose, nil
+	sourceData, err := getData(locations)
+	if err != nil {
+		return nil, false, err
 	}
 
-	return readLocalSource, *local, *verbose, nil
+	return sourceData, *verbose, nil
 }
 
 func main() {
-	read, sourceFile, verbose, err := parseArgs()
+	sourceData, verbose, err := parseArgs()
 	if err != nil {
-		printUsage()
-	}
-
-	sourceData, err := read(sourceFile)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		printUsage(err)
 	}
 
 	services, err := ServiceList(sourceData, verbose)
