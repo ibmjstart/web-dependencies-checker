@@ -95,16 +95,14 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 				info.status = response.Status
 			}
 
-			isAvailable, _ := formatStatus(url, info.status)
-			info.isAvailable = isAvailable
-
+			info.isAvailable = getAvailability(info.status)
 			info.retries++
 		}
 
 		s.safeWrite(url, info)
 	}
 
-	_, formattedStatus := formatStatus(url, info.status)
+	formattedStatus := formatStatus(url, info.status)
 
 	if !s.quiet || !info.isAvailable {
 		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)

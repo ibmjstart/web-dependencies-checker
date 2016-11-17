@@ -80,6 +80,14 @@ func getData(locations []string) ([][]byte, error) {
 	return dataList, nil
 }
 
+func getAvailability(status string) bool {
+	if strings.HasPrefix(status, "2") {
+		return true
+	}
+
+	return false
+}
+
 func formatUrl(url string) string {
 	if strings.Contains(url, "*.") {
 		url = strings.Replace(url, "*.", "", -1)
@@ -92,15 +100,12 @@ func formatUrl(url string) string {
 	return url
 }
 
-func formatStatus(url, status string) (bool, string) {
-	isAvailable := false
+func formatStatus(url, status string) string {
 	formattedStatus := ""
 
 	if strings.HasPrefix(status, "2") {
-		isAvailable = true
 		formattedStatus += fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
-		isAvailable = true
 		formattedStatus += fmt.Sprintf("%s", yellow(status))
 	} else if strings.HasPrefix(status, "4") || strings.HasPrefix(status, "5") {
 		formattedStatus += fmt.Sprintf("%s", red(status))
@@ -113,20 +118,7 @@ func formatStatus(url, status string) (bool, string) {
 			yellow("WARNING:"), yellow(strings.Replace(url, "*.", "", -1)))
 	}
 
-	return isAvailable, formattedStatus
-}
-
-func printUsage(err error) {
-	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
-		cyan("USAGE:") + " ./bx-availability [-t seconds] [-r retries] [-q] [-c] " +
-		"YAML_file_location [YAML_file_location...]\n\n" +
-		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
-		"         r - number of http request retries\n" +
-		"         q - only display status for failed requests\n" +
-		"         c - disable color output\n"
-
-	fmt.Print(usage)
-	os.Exit(1)
+	return formattedStatus
 }
 
 func parseArgs() ([][]byte, bool, error) {
@@ -153,6 +145,19 @@ func parseArgs() ([][]byte, bool, error) {
 	}
 
 	return sourceData, *quiet, nil
+}
+
+func printUsage(err error) {
+	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
+		cyan("USAGE:") + " ./bx-availability [-t seconds] [-r retries] [-q] [-c] " +
+		"YAML_file_location [YAML_file_location...]\n\n" +
+		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
+		"         r - number of http request retries\n" +
+		"         q - only display status for failed requests\n" +
+		"         c - disable color output\n"
+
+	fmt.Print(usage)
+	os.Exit(1)
 }
 
 func main() {
