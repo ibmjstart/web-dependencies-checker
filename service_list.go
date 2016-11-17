@@ -18,16 +18,16 @@ type serviceList struct {
 	Services []service
 	statuses map[string]string
 	output   chan string
-	verbose  bool
+	quiet    bool
 	sync.RWMutex
 }
 
-func ServiceList(sources [][]byte, verbose bool) (*serviceList, error) {
+func ServiceList(sources [][]byte, quiet bool) (*serviceList, error) {
 	var services, temp serviceList
 
 	services.statuses = make(map[string]string)
 	services.output = make(chan string)
-	services.verbose = verbose
+	services.quiet = quiet
 
 	for _, source := range sources {
 		err := yaml.Unmarshal(source, &temp)
@@ -88,7 +88,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 
 	isAvailable, formattedStatus := formatStatus(url, status)
 
-	if s.verbose || !isAvailable {
+	if !s.quiet || !isAvailable {
 		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)
 	}
 	available <- isAvailable

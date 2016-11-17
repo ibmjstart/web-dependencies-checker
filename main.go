@@ -112,10 +112,10 @@ func formatStatus(url, status string) (bool, string) {
 
 func printUsage(err error) {
 	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
-		cyan("USAGE:") + " ./bx-availability [-t seconds] [-v] [-c] " +
+		cyan("USAGE:") + " ./bx-availability [-t seconds] [-q] [-c] " +
 		"YAML_file_location [YAML_file_location...]\n\n" +
 		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
-		"         v - verbose\n" +
+		"         q - only display status for failed requests\n" +
 		"         c - disable color output\n"
 
 	fmt.Print(usage)
@@ -124,8 +124,8 @@ func printUsage(err error) {
 
 func parseArgs() ([][]byte, bool, error) {
 	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
-	verbose := flag.Bool("v", false, "display status response for all URLs")
-	noColor := flag.Bool("c", false, "disable color")
+	quiet := flag.Bool("q", false, "only display status for failed requests")
+	noColor := flag.Bool("c", false, "disable color output")
 	flag.Parse()
 
 	if *noColor {
@@ -144,16 +144,16 @@ func parseArgs() ([][]byte, bool, error) {
 		return nil, false, err
 	}
 
-	return sourceData, *verbose, nil
+	return sourceData, *quiet, nil
 }
 
 func main() {
-	sourceData, verbose, err := parseArgs()
+	sourceData, quiet, err := parseArgs()
 	if err != nil {
 		printUsage(err)
 	}
 
-	services, err := ServiceList(sourceData, verbose)
+	services, err := ServiceList(sourceData, quiet)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -170,7 +170,7 @@ func main() {
 	close(services.output)
 	close(done)
 
-	if verbose {
+	if !quiet {
 		services.displayResults()
 	}
 	fmt.Printf("\nCourtesy of %s - %s\n", cyan("IBM jStart"), jStartUrl)
