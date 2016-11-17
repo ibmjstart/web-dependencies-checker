@@ -82,7 +82,9 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 		}
 
 		for proceed := true; proceed; proceed = (!info.isAvailable && info.retries < client.maxRetries) {
-			response, err := client.Head(formatUrl(url))
+			request := client.newRequest(formatUrl(url))
+
+			response, err := client.Do(request)
 			if err != nil {
 				if strings.Contains(err.Error(), "Timeout exceeded") {
 					info.status = "Request timeout exceeded"

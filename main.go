@@ -21,6 +21,7 @@ var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan).Sprintf
 
 type retryClient struct {
 	maxRetries int
+	userAgent  string
 	http.Client
 }
 
@@ -29,6 +30,14 @@ var client = &retryClient{}
 func Client(timeout, maxRetries int) {
 	client.Timeout = time.Duration(timeout) * time.Second
 	client.maxRetries = maxRetries
+	client.userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 " +
+		"(KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"
+}
+
+func (c *retryClient) newRequest(url string) *http.Request {
+	request, _ := http.NewRequest("HEAD", formatUrl(url), nil)
+	request.Header.Set("User-Agent", c.userAgent)
+	return request
 }
 
 func readLocalSource(filepath string) ([]byte, error) {
