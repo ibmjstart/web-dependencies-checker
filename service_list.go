@@ -73,24 +73,6 @@ func (s *serviceList) safeWrite(key string, value *urlInfo) {
 }
 
 func (s *serviceList) testUrl(url string, available chan bool) {
-	try := func(info *urlInfo) {
-		response, err := client.Head(formatUrl(url))
-		if err != nil {
-			if strings.Contains(err.Error(), "Timeout exceeded") {
-				info.status = "Request timeout exceeded"
-			} else if strings.Contains(err.Error(), "no such host") {
-				info.status = "No such host"
-			} else {
-				info.status = err.Error()
-			}
-		} else {
-			info.status = response.Status
-		}
-
-		isAvailable, _ := formatStatus(url, info.status)
-		info.isAvailable = isAvailable
-	}
-
 	info, found := s.safeLookup(url)
 	if !found {
 		info = &urlInfo{
@@ -99,8 +81,24 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 			retries:     0,
 		}
 
-		for try(info); !info.isAvailable && info.retries < client.maxRetries; info.retries++ {
-			try(info)
+		for proceed := true; proceed; proceed = (!info.isAvailable && info.retries < client.maxRetries) {
+			response, err := client.Head(formatUrl(url))
+			if err != nil {
+				if strings.Contains(err.Error(), "Timeout exceeded") {
+					info.status = "Request timeout exceeded"
+				} else if strings.Contains(err.Error(), "no such host") {
+					info.status = "No such host"
+				} else {
+					info.status = err.Error()
+				}
+			} else {
+				info.status = response.Status
+			}
+
+			isAvailable, _ := formatStatus(url, info.status)
+			info.isAvailable = isAvailable
+
+			info.retries++
 		}
 
 		s.safeWrite(url, info)
