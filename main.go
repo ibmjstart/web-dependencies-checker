@@ -19,10 +19,16 @@ var yellow (func(string, ...interface{}) string) = color.New(color.FgYellow, col
 var red (func(string, ...interface{}) string) = color.New(color.FgRed, color.Bold).SprintfFunc()
 var cyan (func(string, ...interface{}) string) = color.New(color.FgCyan).SprintfFunc()
 
-var client = &http.Client{}
+type retryClient struct {
+	maxRetries int
+	http.Client
+}
 
-func setTimeout(seconds int) {
-	client.Timeout = time.Duration(seconds) * time.Second
+var client = &retryClient{}
+
+func Client(timeout, maxRetries int) {
+	client.Timeout = time.Duration(timeout) * time.Second
+	client.maxRetries = maxRetries
 }
 
 func readLocalSource(filepath string) ([]byte, error) {
@@ -112,9 +118,10 @@ func formatStatus(url, status string) (bool, string) {
 
 func printUsage(err error) {
 	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
-		cyan("USAGE:") + " ./bx-availability [-t seconds] [-q] [-c] " +
+		cyan("USAGE:") + " ./bx-availability [-t seconds] [-r retries] [-q] [-c] " +
 		"YAML_file_location [YAML_file_location...]\n\n" +
 		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
+		"         r - number of http request retries\n" +
 		"         q - only display status for failed requests\n" +
 		"         c - disable color output\n"
 
@@ -124,6 +131,7 @@ func printUsage(err error) {
 
 func parseArgs() ([][]byte, bool, error) {
 	timeout := flag.Int("t", 60, "http request timeout (in seconds)")
+	retries := flag.Int("r", 0, "number of http request retries")
 	quiet := flag.Bool("q", false, "only display status for failed requests")
 	noColor := flag.Bool("c", false, "disable color output")
 	flag.Parse()
@@ -132,7 +140,7 @@ func parseArgs() ([][]byte, bool, error) {
 		color.NoColor = true
 	}
 
-	setTimeout(*timeout)
+	Client(*timeout, *retries)
 	locations := flag.Args()
 
 	if len(locations) == 0 {

@@ -8,6 +8,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type urlInfo struct {
+	status      string
+	isAvailable bool
+	retries     int
+}
+
 type service struct {
 	Name        string
 	Sites       []string
@@ -16,7 +22,7 @@ type service struct {
 
 type serviceList struct {
 	Services []service
-	statuses map[string]string
+	statuses map[string]*urlInfo
 	output   chan string
 	quiet    bool
 	sync.RWMutex
@@ -25,7 +31,7 @@ type serviceList struct {
 func ServiceList(sources [][]byte, quiet bool) (*serviceList, error) {
 	var services, temp serviceList
 
-	services.statuses = make(map[string]string)
+	services.statuses = make(map[string]*urlInfo)
 	services.output = make(chan string)
 	services.quiet = quiet
 
@@ -52,7 +58,7 @@ func (s *serviceList) write(done chan int) {
 	}
 }
 
-func (s *serviceList) safeLookup(key string) (string, bool) {
+func (s *serviceList) safeLookup(key string) (*urlInfo, bool) {
 	s.RLock()
 	value, found := s.statuses[key]
 	s.RUnlock()
@@ -60,38 +66,52 @@ func (s *serviceList) safeLookup(key string) (string, bool) {
 	return value, found
 }
 
-func (s *serviceList) safeWrite(key, value string) {
+func (s *serviceList) safeWrite(key string, value *urlInfo) {
 	s.Lock()
 	s.statuses[key] = value
 	s.Unlock()
 }
 
 func (s *serviceList) testUrl(url string, available chan bool) {
-	_, found := s.safeLookup(url)
-
-	if !found {
+	try := func(info *urlInfo) {
 		response, err := client.Head(formatUrl(url))
 		if err != nil {
 			if strings.Contains(err.Error(), "Timeout exceeded") {
-				s.safeWrite(url, "Request timeout exceeded")
+				info.status = "Request timeout exceeded"
 			} else if strings.Contains(err.Error(), "no such host") {
-				s.safeWrite(url, "No such host")
+				info.status = "No such host"
 			} else {
-				s.safeWrite(url, err.Error())
+				info.status = err.Error()
 			}
 		} else {
-			s.safeWrite(url, response.Status)
+			info.status = response.Status
 		}
+
+		isAvailable, _ := formatStatus(url, info.status)
+		info.isAvailable = isAvailable
 	}
 
-	status, _ := s.safeLookup(url)
+	info, found := s.safeLookup(url)
+	if !found {
+		info = &urlInfo{
+			status:      "",
+			isAvailable: false,
+			retries:     0,
+		}
 
-	isAvailable, formattedStatus := formatStatus(url, status)
+		for try(info); !info.isAvailable && info.retries < client.maxRetries; info.retries++ {
+			try(info)
+		}
 
-	if !s.quiet || !isAvailable {
+		s.safeWrite(url, info)
+	}
+
+	_, formattedStatus := formatStatus(url, info.status)
+
+	if !s.quiet || !info.isAvailable {
 		s.output <- fmt.Sprintf("\t %s %s %s\n", "URL:", cyan(url), formattedStatus)
 	}
-	available <- isAvailable
+	available <- info.isAvailable
 }
 
 func (s *serviceList) testService(serviceIndex int) {
