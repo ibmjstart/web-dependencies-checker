@@ -86,7 +86,6 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 			if err != nil {
 				info.status = err.Error()
 			} else {
-
 				response, err := client.Do(request)
 				if err != nil {
 					if strings.Contains(err.Error(), "Timeout exceeded") {
@@ -99,10 +98,10 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 				} else {
 					info.status = response.Status
 				}
-
-				info.isAvailable = getAvailability(info.status)
-				info.retries++
 			}
+
+			info.isAvailable = getAvailability(info.status)
+			info.retries++
 		}
 
 		s.safeWrite(url, info)
