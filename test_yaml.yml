@@ -1,0 +1,15 @@
+---
+services:
+ - name: firstService
+   sites:
+    - gmail.com
+    - http://youtu.be
+ - name: secondService
+   sites:
+    - "*.slack.com"
+    - http://github.com/ibmjstart/404
+    - http://facebook.com
+ - name: thirdSerivce
+   sites:
+    - 172.217.4.238
+    - gmail.com
