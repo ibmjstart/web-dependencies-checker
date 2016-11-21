@@ -34,10 +34,14 @@ func Client(timeout, maxRetries int) {
 		"(KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36"
 }
 
-func (c *retryClient) newRequest(url string) *http.Request {
-	request, _ := http.NewRequest("HEAD", formatUrl(url), nil)
+func (c *retryClient) newRequest(url string) (*http.Request, error) {
+	request, err := http.NewRequest("HEAD", formatUrl(url), nil)
+	if err != nil {
+		return nil, err
+	}
+
 	request.Header.Set("User-Agent", c.userAgent)
-	return request
+	return request, nil
 }
 
 func readLocalSource(filepath string) ([]byte, error) {
