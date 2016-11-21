@@ -164,8 +164,8 @@ func printUsage(err error) {
 	usage := red("Invalid arguments: ") + err.Error() + "\n\n" +
 		cyan("USAGE:") + " ./bx-availability [-t seconds] [-r retries] [-q] [-c] " +
 		"YAML_file_location [YAML_file_location...]\n\n" +
-		cyan("OPTIONS:") + " t - http request timeout (in seconds)\n" +
-		"         r - number of http request retries\n" +
+		cyan("OPTIONS:") + " t - http request timeout (in seconds) (default 60)\n" +
+		"         r - number of http request retries (default 0)\n" +
 		"         q - only display status for failed requests\n" +
 		"         c - disable color output\n"
 
