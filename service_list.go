@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 
@@ -82,26 +83,42 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 		}
 
 		for proceed := true; proceed; proceed = (!info.isAvailable && info.retries < client.maxRetries) {
-			request, err := client.newRequest(formatUrl(url))
-			if err != nil {
-				info.status = err.Error()
-			} else {
-				response, err := client.Do(request)
+			if strings.HasPrefix(url, "tcp:") {
+				connection, err := net.DialTimeout("tcp", strings.SplitN(url, ":", 2)[1], client.Timeout)
 				if err != nil {
-					if strings.Contains(err.Error(), "Timeout exceeded") {
-						info.status = "Request timeout exceeded"
-					} else if strings.Contains(err.Error(), "no such host") {
-						info.status = "No such host"
-					} else {
-						info.status = err.Error()
-					}
+					info.status = err.Error()
 				} else {
-					info.status = response.Status
+					info.isAvailable = true
+					info.status = "TCP Dial OK"
 				}
-			}
 
-			info.isAvailable = getAvailability(info.status)
-			info.retries++
+				info.retries++
+
+				if connection != nil {
+					connection.Close()
+				}
+			} else {
+				request, err := client.newRequest(url)
+				if err != nil {
+					info.status = err.Error()
+				} else {
+					response, err := client.Do(request)
+					if err != nil {
+						if strings.Contains(err.Error(), "Timeout exceeded") {
+							info.status = "Request timeout exceeded"
+						} else if strings.Contains(err.Error(), "no such host") {
+							info.status = "No such host"
+						} else {
+							info.status = err.Error()
+						}
+					} else {
+						info.status = response.Status
+					}
+				}
+
+				info.isAvailable = getAvailability(info.status)
+				info.retries++
+			}
 		}
 
 		s.safeWrite(url, info)

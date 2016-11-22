@@ -37,10 +37,11 @@ func Client(timeout, maxRetries int) {
 func (c *retryClient) newRequest(url string) (*http.Request, error) {
 	request, err := http.NewRequest("HEAD", formatUrl(url), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error creating request: %s", err)
 	}
 
 	request.Header.Set("User-Agent", c.userAgent)
+	request.Close = true
 	return request, nil
 }
 
@@ -107,7 +108,7 @@ func formatUrl(url string) string {
 	}
 
 	if !strings.HasPrefix(url, "http") {
-		return "http://" + url
+		url = "http://" + url
 	}
 
 	return url
@@ -116,7 +117,7 @@ func formatUrl(url string) string {
 func formatStatus(url, status string) string {
 	formattedStatus := ""
 
-	if strings.HasPrefix(status, "2") {
+	if strings.HasPrefix(status, "2") || status == "TCP Dial OK" {
 		formattedStatus += fmt.Sprintf("%s", green(status))
 	} else if strings.HasPrefix(status, "3") {
 		formattedStatus += fmt.Sprintf("%s", yellow(status))
