@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ func Client(timeout, maxRetries int) {
 }
 
 func (c *retryClient) newRequest(url string) (*http.Request, error) {
-	request, err := http.NewRequest("HEAD", formatUrl(url), nil)
+	request, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating request: %s", err)
 	}
@@ -102,16 +103,23 @@ func getAvailability(status string) bool {
 	return false
 }
 
-func formatUrl(url string) string {
+func formatUrl(url string) (string, error) {
 	if strings.Contains(url, "*.") {
 		url = strings.Replace(url, "*.", "", -1)
 	}
 
 	if !strings.HasPrefix(url, "http") {
-		url = "http://" + url
+		isMatch, err := regexp.MatchString(".*:[0-9]+$", url)
+		if err != nil {
+			return "", fmt.Errorf("Failed to build regex: %s", err)
+		}
+
+		if !isMatch {
+			url += ":80"
+		}
 	}
 
-	return url
+	return url, nil
 }
 
 func formatStatus(url, status string) string {

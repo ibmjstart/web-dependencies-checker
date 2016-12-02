@@ -74,6 +74,8 @@ func (s *serviceList) safeWrite(key string, value *urlInfo) {
 }
 
 func (s *serviceList) testUrl(url string, available chan bool) {
+	url, _ = formatUrl(url)
+
 	info, found := s.safeLookup(url)
 	if !found {
 		info = &urlInfo{
@@ -83,21 +85,7 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 		}
 
 		for proceed := true; proceed; proceed = (!info.isAvailable && info.retries < client.maxRetries) {
-			if strings.HasPrefix(url, "tcp:") {
-				connection, err := net.DialTimeout("tcp", strings.SplitN(url, ":", 2)[1], client.Timeout)
-				if err != nil {
-					info.status = err.Error()
-				} else {
-					info.isAvailable = true
-					info.status = "TCP Dial OK"
-				}
-
-				info.retries++
-
-				if connection != nil {
-					connection.Close()
-				}
-			} else {
+			if strings.HasPrefix(url, "http") {
 				request, err := client.newRequest(url)
 				if err != nil {
 					info.status = err.Error()
@@ -117,8 +105,21 @@ func (s *serviceList) testUrl(url string, available chan bool) {
 				}
 
 				info.isAvailable = getAvailability(info.status)
-				info.retries++
+			} else {
+				connection, err := net.DialTimeout("tcp", url, client.Timeout)
+				if err != nil {
+					info.status = err.Error()
+				} else {
+					info.isAvailable = true
+					info.status = "TCP Dial OK"
+				}
+
+				if connection != nil {
+					connection.Close()
+				}
 			}
+
+			info.retries++
 		}
 
 		s.safeWrite(url, info)
