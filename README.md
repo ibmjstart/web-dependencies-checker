@@ -63,6 +63,34 @@ the services listed in that file.
 ./wdc yaml/test_yaml.yml
 ```
 
+The following is the results of running the above command on my machine. Note that your machine may not produce the exact
+same results as mine.
+
+```
+Service: firstService
+	 URL: gmail.com:80 TCP Dial OK
+	 URL: http://youtu.be 200 OK
+	 Available
+Service: secondService
+	 URL: slack.com:80 TCP Dial OK
+	 URL: http://github.com/ibmjstart/404 404 Not Found
+	 URL: http://facebook.com 200 OK
+	 Unavailable
+Service: thirdSerivce
+	 URL: gmail.com:80 TCP Dial OK
+	 URL: 172.217.4.238:80 TCP Dial OK
+	 Available
+
+Available Services
+firstService
+thirdSerivce
+
+Unavailable Services
+secondService
+
+Courtesy of IBM jStart - www.ibm.com/jstart
+```
+
 #### Options
 
 Name | Flag | Description
